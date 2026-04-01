@@ -9,6 +9,7 @@ import FarmerSchemes from "./farmer/schemes";
 import FarmerOrders from "./farmer/orders";
 import FarmerPaymentHistory from "./farmer/payment-history";
 import FarmerMarketPrices from "./farmer/market-prices";
+import ComplaintBox from "./shared/complaint-box";
 
 export default function FarmerDashboard() {
   return (
@@ -22,6 +23,7 @@ export default function FarmerDashboard() {
         <Route path="/farmer/orders" component={FarmerOrders} />
         <Route path="/farmer/payments" component={FarmerPaymentHistory} />
         <Route path="/farmer/market" component={FarmerMarketPrices} />
+        <Route path="/farmer/complaints" component={ComplaintBox} />
         
         {/* Redirect standalone chat requests to the Orders tab where Chat is integrated */}
         <Route path="/farmer/chat">

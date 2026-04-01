@@ -62,6 +62,20 @@ export const users = pgTable("users", {
   status: userStatusEnum("status").notNull().default("pending"),
   location: text("location"),
   phone: text("phone"),
+  phone2: text("phone2"),
+  address: text("address"),
+  village: text("village"),
+  district: text("district"),
+  state: text("state"),
+  pincode: text("pincode"),
+  city: text("city"),
+  yearsExperience: text("years_experience"),
+  farmingType: text("farming_type"),
+  primaryCrops: text("primary_crops"),
+  farmSize: text("farm_size"),
+  govtId: text("govt_id"),
+  profilePhoto: text("profile_photo"),
+  languagePref: text("language_pref").default("en"),
   fcmToken: text("fcm_token"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -95,6 +109,8 @@ export const orders = pgTable("orders", {
   quantity: doublePrecision("quantity").notNull(),
   totalPrice: doublePrecision("total_price").notNull(),
   status: orderStatusEnum("status").notNull().default("pending"),
+  deliveryAddress: text("delivery_address"),
+  paymentMethod: text("payment_method").default("cod"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -130,10 +146,9 @@ export const complaints = pgTable("complaints", {
   userId: integer("user_id")
     .references(() => users.id)
     .notNull(),
-  orderId: integer("order_id")
-    .references(() => orders.id)
-    .notNull(),
+  orderId: integer("order_id"),
   message: text("message").notNull(),
+  voiceNote: text("voice_note"),
   status: complaintStatusEnum("status").notNull().default("open"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

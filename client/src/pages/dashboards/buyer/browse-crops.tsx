@@ -1,234 +1,186 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { apiRequest } from "../../../lib/api";
-import type { Crop } from "@shared/schema";
-import { Search, MapPin, Loader2, Sparkles, Filter, X } from "lucide-react";
-import { Card, CardContent } from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
-import { Button } from "../../../components/ui/button";
+import { Search, MapPin, Star, X } from "lucide-react";
 
-interface ExtendedCrop extends Crop {
-  farmerName: string;
-  farmerLocation: string;
+interface Crop {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  location?: string;
+  image?: string;
+  farmerName?: string;
+  farmerLocation?: string;
 }
 
-export default function BrowseCrops() {
-  const [crops, setCrops] = useState<ExtendedCrop[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+const FILTER_CHIPS = ["All Crops", "Grains", "Vegetables", "Fruits", "Pulses"];
+const PRICE_CHIPS = [{ label: "Any Price", min: 0, max: Infinity }, { label: "< ₹20/kg", min: 0, max: 20 }, { label: "₹20–₹40", min: 20, max: 40 }, { label: "> ₹40/kg", min: 40, max: Infinity }];
 
+export default function BrowseCrops() {
+  const [crops, setCrops] = useState<Crop[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const [activeChip, setActiveChip] = useState("All Crops");
+  const [priceChip, setPriceChip] = useState(0); // index in PRICE_CHIPS
 
   useEffect(() => {
-    async function fetchCrops() {
-      try {
-        const res = await apiRequest("GET", "/api/crops");
-        const data = await res.json();
-        setCrops(data.crops || []);
-      } catch (err: any) {
-        setError("Failed to load crops from marketplace.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchCrops();
+    apiRequest("GET", "/api/crops")
+      .then(r => r.json())
+      .then(d => { setCrops(d.crops || []); setIsLoading(false); })
+      .catch(() => setIsLoading(false));
   }, []);
 
-  const filteredCrops = crops.filter(crop => {
-    const matchesSearch = crop.name.toLowerCase().includes(search.toLowerCase());
-    const matchesLocation = locationFilter ? crop.farmerLocation?.toLowerCase().includes(locationFilter.toLowerCase()) : true;
-    const matchesMin = minPrice ? crop.price >= parseFloat(minPrice) : true;
-    const matchesMax = maxPrice ? crop.price <= parseFloat(maxPrice) : true;
-    return matchesSearch && matchesLocation && matchesMin && matchesMax;
+  const { min, max } = PRICE_CHIPS[priceChip];
+  const filtered = crops.filter(c => {
+    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.farmerLocation || "").toLowerCase().includes(search.toLowerCase());
+    const matchPrice = c.price >= min && c.price <= max;
+    return matchSearch && matchPrice;
   });
 
-  const getPseudoRating = (id: number) => {
-    // Deterministic mock AI rating
-    const score = 6 + ((id * 3) % 4) + (id % 2 === 0 ? 0.5 : 0);
-    return score > 9.5 ? 9.5 : score;
-  };
-
-  const getQualityLabel = (score: number) => {
-    if (score >= 8.5) return { label: "Recommended", color: "text-emerald-700 bg-emerald-100 border-emerald-200" };
-    if (score >= 7.0) return { label: "Average", color: "text-blue-700 bg-blue-100 border-blue-200" };
-    return { label: "Risky", color: "text-amber-700 bg-amber-100 border-amber-200" };
-  };
-
-  // Stagger animation variants
-  const containerVars = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVars = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
-  };
+  // Pseudo star rating
+  const starRating = (id: number) => (3.5 + ((id * 7) % 15) / 10).toFixed(1);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">Browse Crops</h1>
-          <p className="text-slate-500 mt-1">Discover fresh, high-quality produce from local farmers.</p>
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={() => setShowFilters(!showFilters)}
-          className="md:w-auto w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-        >
-          <Filter size={18} className="mr-2" />
-          {showFilters ? "Hide Filters" : "Show Filters"}
-        </Button>
-      </div>
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-3xl font-black" style={{ color: "#f0fdf4" }}>🛒 Browse Crops Marketplace</h1>
+        <p style={{ color: "#a7c5a9" }}>Fresh produce direct from verified Indian farmers.</p>
+      </motion.div>
 
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="border-emerald-100 shadow-sm bg-emerald-50/30">
-              <CardContent className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Search</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
-                    <Input 
-                      placeholder="e.g., Organic Apples" 
-                      className="pl-9 bg-white border-emerald-100 focus-visible:ring-emerald-500"
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Location</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
-                    <Input 
-                      placeholder="e.g., Nashik" 
-                      className="pl-9 bg-white border-emerald-100 focus-visible:ring-emerald-500"
-                      value={locationFilter}
-                      onChange={e => setLocationFilter(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Min Price (₹)</label>
-                  <Input 
-                    type="number" 
-                    placeholder="0" 
-                    className="bg-white border-emerald-100 focus-visible:ring-emerald-500"
-                    value={minPrice}
-                    onChange={e => setMinPrice(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Max Price (₹)</label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      type="number" 
-                      placeholder="1000" 
-                      className="bg-white border-emerald-100 focus-visible:ring-emerald-500"
-                      value={maxPrice}
-                      onChange={e => setMaxPrice(e.target.value)}
-                    />
-                    {(search || locationFilter || minPrice || maxPrice) && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => { setSearch(""); setLocationFilter(""); setMinPrice(""); setMaxPrice(""); }}
-                        className="shrink-0 text-slate-400 hover:text-red-500"
-                      >
-                        <X size={18} />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+      {/* Search */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+        className="relative">
+        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "#10b981" }} />
+        <input
+          className="f2m-input pl-11 text-base"
+          placeholder="Search crops by name, type, or region…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ borderRadius: 14, padding: "14px 16px 14px 44px" }}
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "#6b7280" }}>
+            <X size={16} />
+          </button>
         )}
-      </AnimatePresence>
+      </motion.div>
 
+      {/* Filter Chips */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
+        className="flex flex-wrap gap-2">
+        {FILTER_CHIPS.map(chip => (
+          <button key={chip} onClick={() => setActiveChip(chip)}
+            className="px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200"
+            style={activeChip === chip
+              ? { background: "#166534", color: "#f0fdf4", boxShadow: "0 0 14px rgba(16,185,129,0.3)" }
+              : { background: "#0e1f16", color: "#a7c5a9", border: "1px solid rgba(16,185,129,0.15)" }}>
+            {chip}
+          </button>
+        ))}
+        <div className="w-px mx-1 self-stretch" style={{ background: "rgba(16,185,129,0.2)" }} />
+        {PRICE_CHIPS.map((pc, i) => (
+          <button key={pc.label} onClick={() => setPriceChip(i)}
+            className="px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200"
+            style={priceChip === i
+              ? { background: "rgba(245,158,11,0.2)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.4)" }
+              : { background: "#0e1f16", color: "#a7c5a9", border: "1px solid rgba(16,185,129,0.15)" }}>
+            {pc.label}
+          </button>
+        ))}
+      </motion.div>
+
+      {/* Results count */}
+      {!isLoading && (
+        <p className="text-sm" style={{ color: "#6b7280" }}>
+          Showing <span style={{ color: "#10b981", fontWeight: 600 }}>{filtered.length}</span> crops
+        </p>
+      )}
+
+      {/* Crop Grid */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-24">
-          <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mb-4" />
-          <p className="text-slate-500">Harvesting the best crops for you...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1,2,3,4,5,6].map(i => <div key={i} className="f2m-skeleton h-72 rounded-2xl" />)}
         </div>
-      ) : error ? (
-        <div className="bg-red-50 text-red-600 p-6 rounded-2xl text-center">
-          {error}
-        </div>
-      ) : filteredCrops.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-slate-100">
-          <Search size={48} className="mx-auto text-slate-300 mb-4" />
-          <h3 className="text-lg font-bold text-slate-700">No crops found</h3>
-          <p className="text-slate-500 text-sm">Try adjusting your filters or search terms.</p>
+      ) : filtered.length === 0 ? (
+        <div className="f2m-card p-16 text-center">
+          <Search size={48} className="mx-auto mb-4" style={{ color: "#4b5563" }} />
+          <h3 className="text-lg font-bold" style={{ color: "#f0fdf4" }}>No crops found</h3>
+          <p style={{ color: "#a7c5a9" }}>Try a different search or filter.</p>
         </div>
       ) : (
-        <motion.div 
-          variants={containerVars} 
-          initial="hidden" 
-          animate="show" 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-        >
-          {filteredCrops.map(crop => {
-            const score = getPseudoRating(crop.id);
-            const quality = getQualityLabel(score);
+        <motion.div
+          variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.07 } } }}
+          initial="hidden" animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map(crop => (
+            <motion.div key={crop.id}
+              variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 280, damping: 22 } } }}>
+              <div className="f2m-crop-card">
+                {/* Image with gradient overlay */}
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={crop.image || "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=600"}
+                    alt={crop.name}
+                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                  />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(6,13,20,0.92) 0%, transparent 55%)" }} />
+                  {/* Crop name on image */}
+                  <p className="absolute bottom-3 left-4 font-black text-white text-xl drop-shadow">{crop.name}</p>
+                  {/* Star rating badge */}
+                  <span className="absolute top-3 right-3 flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full"
+                    style={{ background: "rgba(245,158,11,0.2)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.4)", backdropFilter: "blur(8px)" }}>
+                    <Star size={11} className="fill-current" /> {starRating(crop.id)}
+                  </span>
+                </div>
 
-            return (
-              <motion.div key={crop.id} variants={itemVars}>
+                {/* Details */}
+                <div className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-black" style={{ color: "#10b981" }}>₹{crop.price}<span className="text-sm font-normal" style={{ color: "#6b7280" }}>/kg</span></span>
+                    <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#10b981" }}>
+                      {crop.quantity} tons
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium" style={{ color: "#a7c5a9" }}>🌾 {crop.farmerName || "Verified Farmer"}</p>
+                  {(crop.farmerLocation || crop.location) && (
+                    <p className="text-xs flex items-center gap-1" style={{ color: "#6b7280" }}>
+                      <MapPin size={11} /> {crop.farmerLocation || crop.location}
+                    </p>
+                  )}
+                </div>
+
                 <Link href={`/buyer/crops/${crop.id}`}>
-                  <a className="block group">
-                    <Card className="overflow-hidden border-0 shadow-sm hover:shadow-xl transition-all duration-300 transform group-hover:-translate-y-1 h-full cursor-pointer bg-white">
-                      <div className="h-48 relative overflow-hidden bg-slate-100">
-                        <img 
-                          src={crop.image || "https://images.unsplash.com/photo-1595856407062-817ab0ecdf35"} 
-                          alt={crop.name}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute top-3 left-3 flex gap-2">
-                          <span className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full border shadow-sm backdrop-blur-md ${quality.color}`}>
-                            <Sparkles size={12} />
-                            {quality.label} ({score})
-                          </span>
-                        </div>
-                      </div>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-1">
-                          <h3 className="font-bold text-lg text-slate-800 line-clamp-1">{crop.name}</h3>
-                          <span className="font-bold text-emerald-600 text-lg ml-2 shrink-0">₹{crop.price}<span className="text-xs text-slate-500 font-normal">/kg</span></span>
-                        </div>
-                        <p className="text-sm text-slate-500 mb-3 flex items-center gap-1 line-clamp-1">
-                          <MapPin size={12} /> {crop.farmerLocation || "Location N/A"} • By {crop.farmerName}
-                        </p>
-                        <div className="flex justify-between items-center text-sm font-medium pt-3 border-t border-slate-100">
-                          <span className="text-slate-600">Stock: <span className="text-slate-900">{crop.quantity} kg</span></span>
-                          <span className="text-emerald-600 group-hover:underline">View Details</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </a>
+                  <button className="add-btn">🛒 Add to Order</button>
                 </Link>
-              </motion.div>
-            );
-          })}
+              </div>
+            </motion.div>
+          ))}
         </motion.div>
       )}
+
+      {/* Top Rated Farmers Strip */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+        className="f2m-card p-5">
+        <h2 className="text-base font-bold mb-4" style={{ color: "#f0fdf4" }}>🌟 Top Rated Farmers This Season</h2>
+        <div className="flex gap-3 flex-wrap">
+          {[{ name: "Rajesh Kumar", loc: "Punjab", rating: "4.9" }, { name: "Priya Patel", loc: "Gujarat", rating: "4.8" }, { name: "Suresh Reddy", loc: "Andhra Pradesh", rating: "4.7" }].map((f, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.15)" }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white"
+                style={{ background: "linear-gradient(135deg, #166534, #10b981)" }}>
+                {f.name.charAt(0)}
+              </div>
+              <div>
+                <p className="font-semibold text-sm" style={{ color: "#f0fdf4" }}>{f.name}</p>
+                <p className="text-xs" style={{ color: "#a7c5a9" }}>📍 {f.loc} · ⭐ {f.rating}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import {
   ratings,
   notifications,
 } from "../shim-schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import {
   requireAuth,
   isFarmer,
@@ -243,6 +243,44 @@ router.get("/farmer", requireAuth, isFarmer, async (req: Request, res: Response)
     return res.json({ orders: farmerOrders });
   } catch (error: any) {
     console.error("[ORDERS] Get farmer orders error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// ─── GET /api/orders/farmer/stats ─────────────────────────────────────────────
+// Statistics for the farmer home dashboard
+router.get("/farmer/stats", requireAuth, isFarmer, async (req: Request, res: Response) => {
+  try {
+    const farmerId = userId(req);
+    
+    // Active Listings: Approved crops owned by this farmer
+    const [cropsCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(crops)
+      .where(and(eq(crops.farmerId, farmerId), eq(crops.status, "approved")));
+
+    // Pending Orders: Orders for this farmer's crops that are 'pending'
+    const [pendingCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(orders)
+      .where(and(eq(orders.farmerId, farmerId), eq(orders.status, "pending")));
+
+    // Total Revenue: Sum of totalPrice for 'completed' or 'delivered' orders
+    const [revenueResult] = await db
+      .select({ total: sql<number>`sum(total_price)` })
+      .from(orders)
+      .where(and(
+        eq(orders.farmerId, farmerId), 
+        sql`status IN ('completed', 'delivered')`
+      ));
+
+    return res.json({
+      activeListings: cropsCount?.count || 0,
+      pendingOrders: pendingCount?.count || 0,
+      totalRevenue: revenueResult?.total || 0
+    });
+  } catch (error: any) {
+    console.error("[ORDERS] Get farmer stats error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
