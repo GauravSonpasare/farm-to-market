@@ -17,12 +17,9 @@ import analyticsRoutes from "./routes/analytics";
 import notificationRoutes from "./routes/notifications";
 import marketPricesRoutes from "./routes/market-prices";
 import aiRoutes from "./routes/ai";
+import complaintsRoutes from "./routes/complaints";
 import { setupVite, serveStatic } from "./vite-dev";
 import { attachWebSocketServer } from "./websocket";
-import { initDatabase } from "./init-db";
-
-// Initialise the local SQLite database (creates tables if they don't exist)
-initDatabase();
 
 
 const app = express();
@@ -53,6 +50,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/market-prices", marketPricesRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/complaints", complaintsRoutes);
 
 // Health Check
 app.get("/api/health", (_req, res) => {

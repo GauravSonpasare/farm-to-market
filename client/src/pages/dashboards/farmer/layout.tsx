@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/use-auth";
 import { NotificationBell } from "../../../components/layout/notification-bell";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/farmer/weather", label: "Weather", icon: CloudSun },
   { href: "/farmer/schemes", label: "Govt Schemes", icon: FileBadge },
   { href: "/farmer/market", label: "Market Prices", icon: TrendingUp },
+  { href: "/farmer/complaints", label: "Complaint Box", icon: AlertTriangle },
 ];
 
 export function FarmerLayout({ children }: { children: React.ReactNode }) {

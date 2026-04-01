@@ -130,10 +130,9 @@ export const complaints = pgTable("complaints", {
   userId: integer("user_id")
     .references(() => users.id)
     .notNull(),
-  orderId: integer("order_id")
-    .references(() => orders.id)
-    .notNull(),
+  orderId: integer("order_id"),
   message: text("message").notNull(),
+  voiceNote: text("voice_note"),
   status: complaintStatusEnum("status").notNull().default("open"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

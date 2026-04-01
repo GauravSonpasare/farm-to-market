@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   ShoppingBag,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/use-auth";
 import { NotificationBell } from "../../../components/layout/notification-bell";
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/buyer/payments", label: "Payments", icon: CreditCard },
   { href: "/buyer/chat", label: "Chat", icon: MessageCircle },
   { href: "/buyer/ratings", label: "Ratings", icon: Star },
+  { href: "/buyer/complaints", label: "Complaint Box", icon: AlertTriangle },
 ];
 
 export function BuyerLayout({ children }: { children: React.ReactNode }) {
