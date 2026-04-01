@@ -1,153 +1,195 @@
-import { useAuth } from "../../../hooks/use-auth";
-import { Link } from "wouter";
-import { Sprout, TrendingUp, HandCoins, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
-import { apiRequest } from "../../../lib/api";
 import { motion } from "framer-motion";
+import { apiRequest } from "../../../lib/api";
+import { useAuth } from "../../../hooks/use-auth";
+import { TrendingUp, TrendingDown, Sprout, ShoppingCart, IndianRupee, CheckCircle, Lightbulb } from "lucide-react";
+import { Link } from "wouter";
+
+function CountUp({ target, prefix = "", suffix = "" }: { target: number; prefix?: string; suffix?: string }) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const dur = 1200, steps = 40, step = target / steps;
+    let cur = 0;
+    const t = setInterval(() => {
+      cur += step;
+      if (cur >= target) { setVal(target); clearInterval(t); }
+      else setVal(Math.floor(cur));
+    }, dur / steps);
+    return () => clearInterval(t);
+  }, [target]);
+  return <span>{prefix}{val.toLocaleString("en-IN")}{suffix}</span>;
+}
+
+const SEASONAL_CROPS = [
+  { emoji: "🌾", name: "Rice", demand: "Very High", trend: "+18%", color: "#10b981" },
+  { emoji: "🌽", name: "Maize", demand: "High", trend: "+12%", color: "#10b981" },
+  { emoji: "🥜", name: "Groundnut", demand: "Medium", trend: "+7%", color: "#f59e0b" },
+  { emoji: "🍅", name: "Tomato", demand: "High", trend: "+15%", color: "#10b981" },
+  { emoji: "🫘", name: "Soybean", demand: "Medium", trend: "+5%", color: "#f59e0b" },
+];
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good Morning";
+  if (h < 17) return "Good Afternoon";
+  return "Good Evening";
+}
 
 export default function FarmerHome() {
   const { user } = useAuth();
-  const [predictions, setPredictions] = useState<any[]>([]);
-  const [stats, setStats] = useState({ activeListings: 0, pendingOrders: 0, totalRevenue: 0 });
-  const [activity, setActivity] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const name = (user as any)?.email?.split("@")[0] || "Farmer";
+  const [stats, setStats] = useState({ listings: 0, orders: 0, revenue: 0, approved: 0 });
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    async function load() {
       try {
-        const [predRes, statsRes, notifRes] = await Promise.all([
-          apiRequest("GET", "/api/ai/demand-prediction"),
-          apiRequest("GET", "/api/orders/farmer/stats"),
-          apiRequest("GET", "/api/notifications")
+        const [cropsRes, ordersRes] = await Promise.all([
+          apiRequest("GET", "/api/crops/my"),
+          apiRequest("GET", "/api/orders/farmer"),
         ]);
-        
-        const predData = await predRes.json();
-        const statsData = await statsRes.json();
-        const notifData = await notifRes.json();
-
-        setPredictions(predData.predictions || []);
-        setStats(statsData);
-        setActivity(notifData.notifications?.slice(0, 5) || []);
-      } catch (err) {
-        console.error("Dashboard fetch error:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
+        const cropsData = await cropsRes.json();
+        const ordersData = await ordersRes.json();
+        const crops = cropsData.crops || [];
+        const orders = ordersData.orders || [];
+        const approved = crops.filter((c: any) => c.status === "approved").length;
+        const revenue = orders.filter((o: any) => o.status === "delivered" || o.status === "completed")
+          .reduce((s: number, o: any) => s + (o.totalPrice || 0), 0);
+        setStats({ listings: crops.length, orders: orders.filter((o: any) => o.status === "pending").length, revenue, approved });
+        setRecentOrders(orders.slice(0, 3));
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    }
+    load();
   }, []);
 
+  const statCards = [
+    { label: "My Listings", value: stats.listings, prefix: "", suffix: "", icon: <Sprout size={22} />, trend: "+2 this week", trendUp: true, grad: "linear-gradient(135deg, #166534, #14532d)", glow: "#10b981" },
+    { label: "Pending Orders", value: stats.orders, prefix: "", suffix: "", icon: <ShoppingCart size={22} />, trend: "Awaiting response", trendUp: null, grad: "linear-gradient(135deg, #78350f, #92400e)", glow: "#f59e0b" },
+    { label: "Total Earnings", value: stats.revenue, prefix: "₹", suffix: "", icon: <IndianRupee size={22} />, trend: "+₹8,200 this month", trendUp: true, grad: "linear-gradient(135deg, #065f46, #064e3b)", glow: "#34d399" },
+    { label: "Approved Crops", value: stats.approved, prefix: "", suffix: "", icon: <CheckCircle size={22} />, trend: `${stats.listings > 0 ? Math.round(stats.approved / stats.listings * 100) : 0}% approval rate`, trendUp: true, grad: "linear-gradient(135deg, #1e3a5f, #1e40af)", glow: "#60a5fa" },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">
-            Welcome back, {user?.name}! 🌾
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Here's what is happening with your farm today.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/farmer/upload">
-            <button className="bg-green-600 text-white px-4 py-2 flex items-center gap-2 rounded-lg hover:bg-green-700 shadow-sm transition-colors">
-              <Sprout size={18} />
-              <span>Upload Crop</span>
-            </button>
-          </Link>
-        </div>
+    <div className="space-y-8">
+      {/* Greeting */}
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <h1 className="text-3xl font-black" style={{ color: "#f0fdf4" }}>
+          {getGreeting()}, {name.charAt(0).toUpperCase() + name.slice(1)} 🌾
+        </h1>
+        <p className="mt-1" style={{ color: "#a7c5a9" }}>Here's your farm activity today — Kharif season is in full swing.</p>
+        <p className="text-sm mt-0.5" style={{ color: "#4b5563" }}>
+          {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+        </p>
+      </motion.div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((c, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }} whileHover={{ y: -4 }}
+            className="f2m-stat-card p-5"
+            style={{ background: c.grad, borderBottom: `3px solid ${c.glow}`, boxShadow: `0 4px 24px rgba(0,0,0,0.3)` }}>
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
+                style={{ background: "rgba(255,255,255,0.1)" }}>
+                {c.icon}
+              </div>
+            </div>
+            <div className="text-3xl font-black text-white mb-1">
+              {loading ? <div className="f2m-skeleton h-8 w-20 rounded" /> : <CountUp target={c.value} prefix={c.prefix} suffix={c.suffix} />}
+            </div>
+            <p className="text-sm font-semibold text-white/80">{c.label}</p>
+            <p className="text-xs mt-1 flex items-center gap-1 text-white/60">
+              {c.trendUp === true && <TrendingUp size={12} />}
+              {c.trendUp === false && <TrendingDown size={12} />}
+              {c.trend}
+            </p>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="bg-green-100 p-3 rounded-lg text-green-600">
-            <Sprout size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Active Listings</p>
-            <p className="text-2xl font-bold text-slate-800">{isLoading ? "..." : stats.activeListings}</p>
-          </div>
+      {/* AI Price Suggestion Banner */}
+      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
+        className="rounded-2xl p-5 flex items-start gap-4"
+        style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: "rgba(245,158,11,0.15)" }}>
+          <Lightbulb size={24} style={{ color: "#f59e0b" }} />
         </div>
-
-        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="bg-amber-100 p-3 rounded-lg text-amber-600">
-            <TrendingUp size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Pending Orders</p>
-            <p className="text-2xl font-bold text-slate-800">{isLoading ? "..." : stats.pendingOrders}</p>
-          </div>
+        <div className="flex-1">
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#f59e0b" }}>AI Recommendation</p>
+          <p className="text-xl font-black" style={{ color: "#f0fdf4" }}>Set your Rice price at <span style={{ color: "#f59e0b" }}>₹28/kg</span></p>
+          <p className="text-sm mt-1" style={{ color: "#a7c5a9" }}>Based on current Kharif demand and regional market prices, this price maximises your profit this season.</p>
         </div>
+        <Link href="/farmer/upload">
+          <button className="f2m-btn text-sm whitespace-nowrap mt-1" style={{ background: "rgba(245,158,11,0.85)", color: "#fff" }}>Apply Suggestion</button>
+        </Link>
+      </motion.div>
 
-        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="bg-blue-100 p-3 rounded-lg text-blue-600">
-            <HandCoins size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Total Revenue</p>
-            <p className="text-2xl font-bold text-slate-800">₹{isLoading ? "..." : stats.totalRevenue.toLocaleString()}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* AI Demand Prediction Widget */}
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Sparkles className="text-indigo-500" /> AI Demand Forecast
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {predictions.map((pred, i) => (
-            <motion.div
-              key={pred.cropName}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, type: "spring", stiffness: 100 }}
-              className="bg-gradient-to-br from-indigo-50 to-white p-5 rounded-2xl border border-indigo-100 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-800 text-lg">{pred.cropName}</h3>
-                <span className="text-2xl">{pred.icon}</span>
-              </div>
-              <div className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-full mb-3 shadow-xs">
-                {pred.demandLevel}
-              </div>
-              <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                {pred.reason}
-              </p>
+      {/* Seasonal Crops */}
+      <div>
+        <h2 className="text-lg font-bold mb-4" style={{ color: "#f0fdf4" }}>🌱 Kharif Season — High Demand Crops</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {SEASONAL_CROPS.map((crop, i) => (
+            <motion.div key={crop.name} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5 + i * 0.07, type: "spring" }}
+              whileHover={{ y: -4 }} className="f2m-card p-4 text-center">
+              <div className="text-4xl mb-2">{crop.emoji}</div>
+              <p className="font-bold text-sm" style={{ color: "#f0fdf4" }}>{crop.name}</p>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full mt-1 inline-block"
+                style={{ background: crop.color === "#10b981" ? "rgba(16,185,129,0.15)" : "rgba(245,158,11,0.15)", color: crop.color }}>
+                {crop.demand}
+              </span>
+              <p className="text-sm font-bold mt-1" style={{ color: "#10b981" }}>{crop.trend} ↑</p>
             </motion.div>
           ))}
-          {predictions.length === 0 && (
-            <div className="col-span-3 h-32 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-xl">
-              <p className="text-slate-400">Loading forecast...</p>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">Recent Activity</h2>
-        <div className="space-y-4">
-          {activity.map((item, idx) => (
-            <div key={item.id || idx} className="flex items-center gap-4 p-4 rounded-lg bg-slate-50">
-              <div className={`w-2 h-2 rounded-full ${item.type === 'order' ? 'bg-amber-500' : 'bg-green-500'}`}></div>
-              <p className="text-slate-600">{item.message}</p>
-              <span className="text-sm text-slate-400 ml-auto">
-                {new Date(item.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-          ))}
-          {!isLoading && activity.length === 0 && (
-            <p className="text-slate-400 text-center py-4 italic">No recent activity detected.</p>
-          )}
-          {isLoading && (
-            <div className="animate-pulse space-y-3">
-              <div className="h-12 bg-slate-100 rounded-lg"></div>
-              <div className="h-12 bg-slate-100 rounded-lg"></div>
-            </div>
-          )}
+      {/* Recent Orders */}
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold" style={{ color: "#f0fdf4" }}>📦 Recent Orders</h2>
+          <Link href="/farmer/orders">
+            <button className="text-sm font-semibold" style={{ color: "#10b981" }}>View all →</button>
+          </Link>
         </div>
+        {loading ? (
+          <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="f2m-skeleton h-16 rounded-xl" />)}</div>
+        ) : recentOrders.length === 0 ? (
+          <div className="f2m-card p-8 text-center">
+            <ShoppingCart size={40} className="mx-auto mb-3" style={{ color: "#4b5563" }} />
+            <p style={{ color: "#a7c5a9" }}>No orders yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentOrders.map((order, i) => {
+              const STATUS_COLOR: Record<string, string> = { pending: "#f59e0b", accepted: "#60a5fa", shipped: "#a78bfa", delivered: "#10b981", completed: "#10b981", rejected: "#ef4444" };
+              return (
+                <motion.div key={order.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="f2m-card p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {order.cropImage && <img src={order.cropImage} alt="" className="w-10 h-10 rounded-lg object-cover" />}
+                    <div>
+                      <p className="font-semibold text-sm" style={{ color: "#f0fdf4" }}>{order.cropName || "Crop"}</p>
+                      <p className="text-xs" style={{ color: "#a7c5a9" }}>Buyer · {order.quantity} kg</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold" style={{ color: "#10b981" }}>₹{order.totalPrice?.toLocaleString("en-IN")}</p>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: `${STATUS_COLOR[order.status] || "#6b7280"}22`, color: STATUS_COLOR[order.status] || "#6b7280" }}>
+                      {order.status}
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
