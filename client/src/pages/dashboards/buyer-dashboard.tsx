@@ -5,6 +5,7 @@ import BrowseCrops from "./buyer/browse-crops";
 import CropDetail from "./buyer/crop-detail";
 import MyOrders from "./buyer/my-orders";
 import BuyerPaymentHistory from "./buyer/payment-history";
+import ComplaintBox from "./shared/complaint-box";
 
 export default function BuyerDashboard() {
   return (
@@ -23,6 +24,7 @@ export default function BuyerDashboard() {
         <Route path="/buyer/ratings">
           <div className="p-8"><h1 className="text-2xl font-bold">My Ratings & Feedback (Working in Progress)</h1></div>
         </Route>
+        <Route path="/buyer/complaints" component={ComplaintBox} />
       </Switch>
     </BuyerLayout>
   );

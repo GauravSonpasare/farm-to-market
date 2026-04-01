@@ -12,7 +12,11 @@ const router = Router();
 
 router.post("/register", async (req: Request, res: Response) => {
   try {
-    const { name, email, password, role, phone, location } = req.body;
+    const {
+      name, email, password, role, phone, location,
+      phone2, address, village, district, state, pincode, city,
+      yearsExp, farmingType, primaryCrops, farmSize, govtId,
+    } = req.body;
 
     // Validate required fields
     if (!name || !email || !password || !role) {
@@ -48,16 +52,28 @@ router.post("/register", async (req: Request, res: Response) => {
     // Buyers get instant approval, farmers need admin approval
     const status = role === "buyer" ? "approved" : "pending";
 
-    // Insert user — better-sqlite3 doesn't support .returning(), so we fetch after insert
+    // Insert user with extended profile fields
     await db.insert(users).values({
       name,
       email,
       password: hashedPassword,
       role,
       status,
-      phone: phone || null,
-      location: location || null,
-    });
+      phone:           phone    || null,
+      phone2:          phone2   || null,
+      location:        location || address || null,
+      address:         address  || null,
+      village:         village  || null,
+      district:        district || null,
+      state:           state    || null,
+      pincode:         pincode  || null,
+      city:            city     || null,
+      yearsExperience: yearsExp      || null,
+      farmingType:     farmingType   || null,
+      primaryCrops:    primaryCrops  || null,
+      farmSize:        farmSize      || null,
+      govtId:          govtId        || null,
+    } as any);
 
     // Fetch the newly created user
     const [newUser] = await db
