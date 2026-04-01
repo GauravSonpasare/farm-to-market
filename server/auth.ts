@@ -43,7 +43,11 @@ passport.use(
           });
         }
 
-        return done(null, user);
+        return done(null, {
+          ...user,
+          role: user.role as "farmer" | "buyer" | "admin",
+          status: user.status as "pending" | "approved" | "blocked",
+        });
       } catch (err) {
         return done(err);
       }
