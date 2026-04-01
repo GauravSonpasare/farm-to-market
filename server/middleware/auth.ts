@@ -12,12 +12,10 @@ export interface JwtPayload {
   status: "pending" | "approved" | "blocked";
 }
 
-// Extend Express Request to include the authenticated user
+// Extend Express User to include the authenticated user fields
 declare global {
   namespace Express {
-    interface Request {
-      user?: JwtPayload;
-    }
+    interface User extends JwtPayload {}
   }
 }
 
@@ -63,7 +61,14 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
 }
 
 export function isFarmer(req: Request, res: Response, next: NextFunction) {
-  if (!req.user || req.user.role !== "farmer") {
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  // Allow admins to act as farmers for testing/management
+  if (req.user.role === "admin") {
+    return next();
+  }
+  if (req.user.role !== "farmer") {
     return res.status(403).json({ message: "Farmer access required" });
   }
   if (req.user.status !== "approved") {
