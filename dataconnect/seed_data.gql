@@ -1,0 +1,84 @@
+mutation CreateDemoData @transaction @auth(level: PUBLIC, insecureReason: "This is seed data for demo purposes, and does not need to be secured.") {
+  user_insertMany(data: [
+    {
+      id: "b4d3a2c1-0e1f-4d2b-9c3a-8f7e6d5c4b3a",
+      username: "farmerjohn",
+      email: "john@example.com",
+      userType: "Farmer",
+      createdAt: "2023-01-01T10:00:00Z",
+      farmName: "Green Acres Farm",
+      address: "123 Farm Rd, Ruralville",
+      contactNumber: "555-1234"
+    },
+    {
+      id: "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      username: "buyeranna",
+      email: "anna@example.com",
+      userType: "Buyer",
+      createdAt: "2023-01-02T11:00:00Z",
+      companyName: "Fresh Produce Inc.",
+      address: "456 Market St, Cityville",
+      contactNumber: "555-5678"
+    }
+  ])
+  cropListing_insertMany(data: [
+    {
+      id: "c7d8e9f0-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+      farmerId: "b4d3a2c1-0e1f-4d2b-9c3a-8f7e6d5c4b3a",
+      cropName: "Organic Tomatoes",
+      quantity: 100.5,
+      unit: "kg",
+      pricePerUnit: 2.50,
+      location: "Ruralville",
+      createdAt: "2023-01-05T12:00:00Z",
+      status: "Available",
+      description: "Freshly picked organic tomatoes.",
+      aiPriceSuggestion: 2.60,
+      aiQualityRating: 4.8
+    },
+    {
+      id: "e0f1a2b3-c4d5-6e7f-8a9b-0c1d2e3f4a5b",
+      farmerId: "b4d3a2c1-0e1f-4d2b-9c3a-8f7e6d5c4b3a",
+      cropName: "Sweet Corn",
+      quantity: 500.0,
+      unit: "ears",
+      pricePerUnit: 0.75,
+      location: "Ruralville",
+      createdAt: "2023-01-06T13:00:00Z",
+      status: "Available",
+      description: "Locally grown sweet corn.",
+      aiPriceSuggestion: 0.70,
+      aiQualityRating: 4.5
+    }
+  ])
+  marketTrend_insertMany(data: [
+    {
+      id: "f9e8d7c6-b5a4-3b2c-1d0e-9f8a7b6c5d4e",
+      cropName: "Organic Tomatoes",
+      date: "2023-01-01",
+      averagePrice: 2.75,
+      totalVolumeSold: 1500.0,
+      region: "Central"
+    },
+    {
+      id: "d3c2b1a0-f9e8-7d6c-5b4a-3f2e1d0c9b8a",
+      cropName: "Sweet Corn",
+      date: "2023-01-01",
+      averagePrice: 0.80,
+      totalVolumeSold: 20000.0,
+      region: "Central"
+    }
+  ])
+  order_insertMany(data: [
+    {
+      id: "12345678-1234-5678-1234-567812345678",
+      buyerId: "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      cropListingId: "c7d8e9f0-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+      orderDate: "2023-01-07T09:00:00Z",
+      quantityOrdered: 50.0,
+      totalPrice: 125.00,
+      orderStatus: "Pending",
+      deliveryAddress: "456 Market St, Cityville"
+    }
+  ])
+}

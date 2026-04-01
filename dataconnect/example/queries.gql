@@ -1,0 +1,16 @@
+query AllCropListings @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public as it retrieves general crop listing information.") {
+  cropListings {
+    id
+    cropName
+    quantity
+    unit
+    pricePerUnit
+    location
+    status
+    description
+    farmer {
+      username
+      farmName
+    }
+  }
+}

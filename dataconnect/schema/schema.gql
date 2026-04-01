@@ -1,0 +1,50 @@
+type User @table {
+  username: String!
+  email: String!
+  userType: String!
+  createdAt: Timestamp!
+  farmName: String
+  address: String
+  contactNumber: String
+  companyName: String
+}
+
+type CropListing @table {
+  farmer: User!
+  cropName: String!
+  quantity: Float!
+  unit: String!
+  pricePerUnit: Float!
+  location: String!
+  createdAt: Timestamp!
+  status: String!
+  description: String
+  aiPriceSuggestion: Float
+  aiQualityRating: Float
+}
+
+type Image @table {
+  cropListing: CropListing!
+  imageUrl: String!
+  uploadedAt: Timestamp!
+  caption: String
+}
+
+type Order @table {
+  buyer: User!
+  cropListing: CropListing!
+  orderDate: Timestamp!
+  quantityOrdered: Float!
+  totalPrice: Float!
+  orderStatus: String!
+  deliveryAddress: String
+  notes: String
+}
+
+type MarketTrend @table {
+  cropName: String!
+  date: Date!
+  averagePrice: Float!
+  totalVolumeSold: Float!
+  region: String
+}

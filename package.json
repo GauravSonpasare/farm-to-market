@@ -1,0 +1,30 @@
+{
+  "name": "farm-to-market",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Farm-to-Market: Connecting farmers directly with buyers",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "install:all": "cd client; npm install; cd ../server; npm install"
+  },
+  "keywords": [
+    "farm",
+    "marketplace",
+    "agriculture"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@dataconnect/generated": "file:src/dataconnect-generated",
+    "@neondatabase/serverless": "^1.0.2",
+    "drizzle-orm": "^0.45.2",
+    "drizzle-zod": "^0.8.3",
+    "firebase": "^12.11.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
